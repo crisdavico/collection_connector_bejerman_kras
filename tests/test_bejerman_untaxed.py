@@ -4,6 +4,8 @@
 import json
 from datetime import date
 
+from lxml import etree
+
 from odoo.exceptions import UserError
 from odoo.tests import TransactionCase
 
@@ -296,3 +298,26 @@ class TestBejermanUntaxedSnapshot(BejermanTestMixin, TransactionCase):
         by_id = {row["id"]: row for row in debt["invoices"]}
         self.assertEqual(by_id["FHK|00004|A|00001234"]["amount_untaxed"], 800.0)
         self.assertEqual(by_id["PRE|00004||00000077"]["amount_untaxed"], 200.0)
+
+
+class TestBejermanUntaxedDebtList(BejermanTestMixin, TransactionCase):
+    """The Bejerman Debt list shows the untaxed amounts next to the taxed ones."""
+
+    def test_list_shows_untaxed_columns_with_totals(self):
+        manager = self._create_user(
+            "untaxed_manager", "collection.group_collection_manager"
+        )
+        views = (
+            self.env["collection.connector.bejerman.debt"]
+            .with_user(manager)
+            .get_views([(False, "list")])
+        )
+        arch = etree.fromstring(views["views"]["list"]["arch"])
+        names = arch.xpath("//field/@name")
+        for name, after in (
+            ("amount_untaxed", "amount"),
+            ("balance_untaxed", "balance"),
+        ):
+            self.assertEqual(names.index(name), names.index(after) + 1, name)
+            (field,) = arch.xpath(f"//field[@name='{name}']")
+            self.assertEqual(field.get("sum"), "Total", name)

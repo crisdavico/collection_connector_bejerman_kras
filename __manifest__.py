@@ -10,6 +10,7 @@
     "depends": ["collection_connector_bejerman"],
     "data": [
         "views/collection_connector_views.xml",
+        "views/collection_connector_bejerman_debt_views.xml",
     ],
     "post_init_hook": "post_init_hook",
     "installable": True,
