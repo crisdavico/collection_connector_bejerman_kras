@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<odoo>
+    <record id="view_bejerman_debt_list_kras" model="ir.ui.view">
+        <field name="name">collection.connector.bejerman.debt.list.kras</field>
+        <field name="model">collection.connector.bejerman.debt</field>
+        <field
+      name="inherit_id"
+      ref="collection_connector_bejerman.view_bejerman_debt_list"
+    />
+        <field name="arch" type="xml">
+            <field name="amount" position="after">
+                <field name="amount_untaxed" sum="Total" />
+            </field>
+            <field name="balance" position="after">
+                <field name="balance_untaxed" sum="Total" />
+            </field>
+        </field>
+    </record>
+</odoo>

@@ -29,14 +29,14 @@ today, `DD/MM/YYYY`. Each voucher is matched on its internal type (`COMP_CODINT`
 `COMP_COD`), point of sale, letter and number (from `COMPROBANTE`) and customer
 (`CLIENTE_COD`); its untaxed share is `(NETO + NGEX) / TOTAL`, so taxes and perceptions
 are left out. Every open debt row stores `amount_untaxed` and `balance_untaxed`, the
-share of its amount and of its open balance, and `get_customer_debt` sends
-`amount_untaxed` to `collection`, which pays the seller's commission on that share of
-what was collected. Only the open invoices that both views list are kept: an invoice of
-`Saldos al dia` the VAT book view does not list is left out of the debt, and the refresh
-logs how many and a few of their ids. Quotations keep the total and are kept only when
-issued in the same 365 days; older ones are left out and counted in the log. When the
-view is not set, every open row is kept with its total. A failed read of the view fails
-the refresh like the debt view.
+share of its amount and of its open balance (both shown, with totals, in the **Bejerman
+Debt** list), and `get_customer_debt` sends `amount_untaxed` to `collection`, which pays
+the seller's commission on that share of what was collected. Only the open invoices that
+both views list are kept: an invoice of `Saldos al dia` the VAT book view does not list
+is left out of the debt, and the refresh logs how many and a few of their ids.
+Quotations keep the total and are kept only when issued in the same 365 days; older ones
+are left out and counted in the log. When the view is not set, every open row is kept
+with its total. A failed read of the view fails the refresh like the debt view.
 
 Live debt: optionally, set Bejerman Debt Filter Field (for example `CVE_CODCLI`) once
 the ERP exposes a filterable child view: debt is then read live per customer instead of
