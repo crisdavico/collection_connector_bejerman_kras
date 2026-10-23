@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<odoo>
+    <record id="view_collection_connector_form_bejerman_kras" model="ir.ui.view">
+        <field name="name">collection.connector.form.bejerman.kras</field>
+        <field name="model">collection.connector</field>
+        <field
+      name="inherit_id"
+      ref="collection_connector_bejerman.view_collection_connector_form_bejerman"
+    />
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='bejerman_ca_bundle']" position="after">
+                <field
+          name="bejerman_debt_scenario"
+          invisible="type != 'bejerman' or bejerman_profile != 'kras'"
+          groups="base.group_system,collection.group_collection_manager"
+        />
+                <field
+          name="bejerman_debt_view"
+          invisible="type != 'bejerman' or bejerman_profile != 'kras'"
+          groups="base.group_system,collection.group_collection_manager"
+        />
+                <field
+          name="bejerman_debt_filter_field"
+          invisible="type != 'bejerman' or bejerman_profile != 'kras'"
+          groups="base.group_system,collection.group_collection_manager"
+        />
+                <field
+          name="bejerman_untaxed_scenario"
+          invisible="type != 'bejerman' or bejerman_profile != 'kras'"
+          groups="base.group_system,collection.group_collection_manager"
+        />
+                <field
+          name="bejerman_untaxed_view"
+          invisible="type != 'bejerman' or bejerman_profile != 'kras'"
+          groups="base.group_system,collection.group_collection_manager"
+        />
+                <field
+          name="bejerman_quotation_kinds"
+          invisible="type != 'bejerman' or bejerman_profile != 'kras'"
+          groups="base.group_system,collection.group_collection_manager"
+        />
+            </xpath>
+        </field>
+    </record>
+</odoo>

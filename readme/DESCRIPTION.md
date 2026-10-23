@@ -1,0 +1,44 @@
+Kras's debt, sellers and seller commission base, read from its Bejerman query views.
+
+Adds the `kras` value to **Bejerman Profile** (`collection_connector_bejerman`) and acts
+only on connectors of that profile; connectors of other customers in the same database
+are untouched. Installing the addon marks every Bejerman connector that already exists
+as `kras` (`post_init_hook`): before this addon, the Kras pipeline was the base addon's
+only behaviour. Uninstalling it sets those connectors back to `standard`, whose refresh
+fails closed. The Kras settings (debt, untaxed and quotation fields) show on the
+connector form only for `kras` connectors; collections managers can edit them for their
+company.
+
+Debt snapshot: the debt view (**Debt Scenario** and **Debt View**, `Saldos al día/*`,
+one row per sales voucher) is a ~200 MB download. A refresh downloads the customers and
+the debt view in one session, keeps as open debt only vouchers with a positive
+local-currency balance (`CVE_SALDOMONLOC > 0`; reconciled rows are dropped), and stores
+each customer's open credit (the sum of its negative balances: credit notes, advances)
+on the customer row. The sellers are the voucher sellers (`CVEVEN_COD` / `VEN_DESC`) of
+every debt view row, open or not, taken from that same download. Voucher type `PRE`
+(configurable through Bejerman Quotation Kinds, default `PRE`) is a `quotation`, every
+other type an `invoice`; the external id is the stable `type|point|letter|number` key.
+
+Untaxed amount (seller commission base): when **Untaxed Scenario** and **Untaxed View**
+are set (a sales VAT book query view, e.g. `Libro IVA Ventas/IA CRIS`; managers can edit
+both, setting only one is a configuration error), the refresh reads that view in the
+same session, after the debt view, for the last 365 days: the view's two variable
+filters on the issue date are sent on every refresh, each by the name the Queries
+parameters dialog shows: `Fecha_Emision >=` as 365 days ago and `Fecha_Emision <=` as
+today, `DD/MM/YYYY`. Each voucher is matched on its internal type (`COMP_CODINT`, not
+`COMP_COD`), point of sale, letter and number (from `COMPROBANTE`) and customer
+(`CLIENTE_COD`); its untaxed share is `(NETO + NGEX) / TOTAL`, so taxes and perceptions
+are left out. Every open debt row stores `amount_untaxed` and `balance_untaxed`, the
+share of its amount and of its open balance, and `get_customer_debt` sends
+`amount_untaxed` to `collection`, which pays the seller's commission on that share of
+what was collected. Only the open invoices that both views list are kept: an invoice of
+`Saldos al dia` the VAT book view does not list is left out of the debt, and the refresh
+logs how many and a few of their ids. Quotations keep the total and are kept only when
+issued in the same 365 days; older ones are left out and counted in the log. When the
+view is not set, every open row is kept with its total. A failed read of the view fails
+the refresh like the debt view.
+
+Live debt: optionally, set Bejerman Debt Filter Field (for example `CVE_CODCLI`) once
+the ERP exposes a filterable child view: debt is then read live per customer instead of
+from the snapshot, with no untaxed amount (commission on the total), and sheets marked
+**Entered in the ERP** are no longer subtracted.
