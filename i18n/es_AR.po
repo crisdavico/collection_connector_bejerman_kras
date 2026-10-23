@@ -1,0 +1,139 @@
+# Translation of Odoo Server.
+# This file contains the translation of the following modules:
+# 	* collection_connector_bejerman_kras
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Odoo Server 19.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-10-23 17:51+0000\n"
+"PO-Revision-Date: 2026-10-23 17:51+0000\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: \n"
+"Plural-Forms: \n"
+
+#. module: collection_connector_bejerman_kras
+#: model:ir.model.fields,field_description:collection_connector_bejerman_kras.field_collection_connector_bejerman_debt__amount_untaxed
+msgid "Amount Untaxed"
+msgstr "Importe sin impuestos"
+
+#. module: collection_connector_bejerman_kras
+#: model:ir.model.fields,field_description:collection_connector_bejerman_kras.field_collection_connector_bejerman_debt__balance_untaxed
+msgid "Balance Untaxed"
+msgstr "Saldo sin impuestos"
+
+#. module: collection_connector_bejerman_kras
+#: model:ir.model.fields,field_description:collection_connector_bejerman_kras.field_collection_connector__bejerman_debt_filter_field
+msgid "Bejerman Debt Filter Field"
+msgstr "Campo de filtro de deuda de Bejerman"
+
+#. module: collection_connector_bejerman_kras
+#: model:ir.model,name:collection_connector_bejerman_kras.model_collection_connector_bejerman_debt
+msgid "Bejerman Open Debt Snapshot"
+msgstr "Instantánea de deuda pendiente de Bejerman"
+
+#. module: collection_connector_bejerman_kras
+#: model:ir.model.fields,field_description:collection_connector_bejerman_kras.field_collection_connector__bejerman_profile
+msgid "Bejerman Profile"
+msgstr "Perfil de Bejerman"
+
+#. module: collection_connector_bejerman_kras
+#: model:ir.model.fields,field_description:collection_connector_bejerman_kras.field_collection_connector__bejerman_quotation_kinds
+msgid "Bejerman Quotation Kinds"
+msgstr "Clases de presupuesto de Bejerman"
+
+#. module: collection_connector_bejerman_kras
+#: model:ir.model,name:collection_connector_bejerman_kras.model_collection_connector
+msgid "Collection Connector"
+msgstr "Conector de cobranzas"
+
+#. module: collection_connector_bejerman_kras
+#: model:ir.model.fields,field_description:collection_connector_bejerman_kras.field_collection_connector__bejerman_debt_scenario
+msgid "Debt Scenario"
+msgstr "Escenario de deuda"
+
+#. module: collection_connector_bejerman_kras
+#: model:ir.model.fields,field_description:collection_connector_bejerman_kras.field_collection_connector__bejerman_debt_view
+msgid "Debt View"
+msgstr "Vista de deuda"
+
+#. module: collection_connector_bejerman_kras
+#: model:ir.model.fields,field_description:collection_connector_bejerman_kras.field_collection_connector__display_name
+#: model:ir.model.fields,field_description:collection_connector_bejerman_kras.field_collection_connector_bejerman_debt__display_name
+msgid "Display Name"
+msgstr "Nombre en pantalla"
+
+#. module: collection_connector_bejerman_kras
+#: model:ir.model.fields,field_description:collection_connector_bejerman_kras.field_collection_connector__id
+#: model:ir.model.fields,field_description:collection_connector_bejerman_kras.field_collection_connector_bejerman_debt__id
+msgid "ID"
+msgstr ""
+
+#. module: collection_connector_bejerman_kras
+#: model:ir.model.fields.selection,name:collection_connector_bejerman_kras.selection__collection_connector__bejerman_profile__kras
+msgid "Kras"
+msgstr ""
+
+#. module: collection_connector_bejerman_kras
+#: model:ir.model.fields,help:collection_connector_bejerman_kras.field_collection_connector__bejerman_debt_filter_field
+msgid ""
+"Query-view column (e.g. CVE_CODCLI) that filters the debt view by customer. "
+"When set, debt is read live per customer instead of from the snapshot."
+msgstr ""
+"Columna de la vista de consulta (por ejemplo, CVE_CODCLI) que filtra la "
+"vista de deuda por cliente. Si está configurada, la deuda se lee en vivo por"
+" cliente en lugar de leerse de la instantánea."
+
+#. module: collection_connector_bejerman_kras
+#: model:ir.model.fields,help:collection_connector_bejerman_kras.field_collection_connector__bejerman_untaxed_view
+msgid ""
+"Sales VAT book query view, as Query/View (e.g. Libro IVA Ventas/IA CRIS), "
+"read for the last 365 days. Only the open invoices it lists, and the "
+"quotations of the same 365 days, are kept as debt."
+msgstr ""
+"Vista de consulta del Libro IVA Ventas, como Consulta/Vista (p. ej. Libro "
+"IVA Ventas/IA CRIS), leída para los últimos 365 días. Solo se conservan como"
+" deuda las facturas abiertas que incluye y los presupuestos de los mismos "
+"365 días."
+
+#. module: collection_connector_bejerman_kras
+#: model:ir.model.fields,help:collection_connector_bejerman_kras.field_collection_connector__bejerman_untaxed_scenario
+msgid ""
+"Scenario of the sales VAT book query view that gives each invoice's untaxed "
+"amount (NETO + NGEX). Leave it and the view empty to pay commission on the "
+"total."
+msgstr ""
+"Escenario de la vista de consulta del Libro IVA Ventas que da el importe sin"
+" impuestos de cada factura (NETO + NGEX). Déjelo vacío, junto con la vista, "
+"para pagar la comisión sobre el total."
+
+#. module: collection_connector_bejerman_kras
+#. odoo-python
+#: code:addons/collection_connector_bejerman_kras/models/collection_connector.py:0
+msgid ""
+"The Bejerman connector is not configured. Missing settings: %(settings)s."
+msgstr ""
+"El conector de Bejerman no está configurado. Faltan los parámetros: "
+"%(settings)s."
+
+#. module: collection_connector_bejerman_kras
+#: model:ir.model.fields,field_description:collection_connector_bejerman_kras.field_collection_connector__bejerman_untaxed_scenario
+msgid "Untaxed Scenario"
+msgstr "Escenario sin impuestos"
+
+#. module: collection_connector_bejerman_kras
+#: model:ir.model.fields,field_description:collection_connector_bejerman_kras.field_collection_connector__bejerman_untaxed_view
+msgid "Untaxed View"
+msgstr "Vista sin impuestos"
+
+#. module: collection_connector_bejerman_kras
+#: model:ir.model.fields,help:collection_connector_bejerman_kras.field_collection_connector__bejerman_profile
+msgid ""
+"Which customer-specific addon reads this connector's debt. Standard reads "
+"customers only and has no debt source."
+msgstr ""
+"Qué módulo propio del cliente lee la deuda de este conector. Estándar solo "
+"lee los clientes y no tiene origen de deuda."
