@@ -105,7 +105,7 @@ class TestBejermanErpEntry(BejermanTestMixin, TransactionCase):
     def test_marked_sheet_is_released_by_the_next_refresh_only(self):
         self._refresh(self.connector)
         sheet = self._closed_sheet()
-        sheet.action_mark_erp_entered()
+        self.assertTrue(sheet.erp_entered_date)
         self.assertEqual(self._reserved(), 100.0)
         # A refresh that started before the mark may predate the ERP entry.
         with privileged(_SNAPSHOT_SCOPE):
