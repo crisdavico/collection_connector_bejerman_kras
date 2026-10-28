@@ -75,7 +75,10 @@ class TestBejermanKrasProfile(BejermanTestMixin, TransactionCase):
         )
         self._refresh(connector)
         debts = self.env["collection.connector.bejerman.debt"].search(
-            [("connector_id", "=", connector.id)]
+            [
+                ("connector_id", "=", connector.id),
+                ("document_kind", "!=", "credit_note"),
+            ]
         )
         self.assertTrue(debts)
         self.assertTrue(all(debt.amount_untaxed for debt in debts))

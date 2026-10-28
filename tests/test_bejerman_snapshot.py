@@ -90,6 +90,7 @@ class TestBejermanSnapshot(BejermanTestMixin, TransactionCase):
             [
                 "FHK|00004|A|00001234",
                 "FHK|00004|A|00001235",
+                "NC|00004|A|00000009",
                 "PRE|00004||00000077",
                 "SID|||00000005",
             ],
@@ -215,7 +216,8 @@ class TestBejermanSnapshot(BejermanTestMixin, TransactionCase):
         ids = self._debts(connector).mapped("external_invoice_id")
         self.assertNotIn("FHK|00004|A|00007777", ids)
         self.assertNotIn("FHK|00004|A|00008888", ids)
-        self.assertEqual(len(ids), 4)
+        # The 4 open vouchers and the credit note of customer 123.
+        self.assertEqual(len(ids), 5)
         self.assertEqual(connector.bejerman_snapshot_debt_count, 4)
         self.assertEqual(
             set(self._debts(connector).mapped("customer_code")),

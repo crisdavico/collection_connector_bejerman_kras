@@ -148,6 +148,7 @@ class CollectionConnector(models.Model):
             debt_rows, kinds, customer_codes=codes, stats=stats
         )
         credits = mapping.map_customer_credits(debt_rows, customer_codes=codes)
+        credit_notes = mapping.map_open_credits(debt_rows, customer_codes=codes)
         customers = [
             dict(row, credit_total=credits.get(row["customer_code"], 0.0))
             for row in customers
@@ -165,6 +166,11 @@ class CollectionConnector(models.Model):
         debts = mapping.apply_untaxed(
             debts, shares, stats, since=mapping.untaxed_window_start(today)
         )
+        # Listed after the VAT book filter, which only concerns invoices.
+        ids = {debt["external_invoice_id"] for debt in debts}
+        debts += [
+            note for note in credit_notes if note["external_invoice_id"] not in ids
+        ]
         return customers, debts, sellers
 
     @api.private

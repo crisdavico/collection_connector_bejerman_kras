@@ -50,6 +50,25 @@ class TestBejermanCreditMapping(TransactionCase):
             {"125": 40.0},
         )
 
+    def test_open_credits_are_listed_with_their_negative_balance(self):
+        rows = [
+            _debt_row("NC", "00004", "A", "00000001", "000123", "2026-04-01", -300),
+            _debt_row("NC", "00004", "A", "00000001", "000123", "2026-04-01", -300),
+            _debt_row("NC", "00004", "A", "00000002", "000125", "2026-04-01", -40),
+            _debt_row("FHK", "00004", "A", "00000004", "000123", "2026-04-01", 1000),
+            _debt_row("FHK", "00004", "A", "00000005", "000123", "2026-04-01", 0),
+        ]
+        entries = mapping.map_open_credits(rows, customer_codes={"123"})
+        self.assertEqual(len(entries), 1)
+        entry = entries[0]
+        self.assertEqual(entry["external_invoice_id"], "NC|00004|A|00000001")
+        self.assertEqual(entry["number"], "NC A 00004-00000001")
+        self.assertEqual(entry["customer_code"], "123")
+        self.assertEqual(entry["document_kind"], "credit_note")
+        self.assertEqual(entry["balance"], -300.0)
+        self.assertEqual(entry["amount"], -300.0)
+        self.assertEqual(entry["due_date"], "2026-04-01")
+
     def test_open_debt_still_lists_invoices_only(self):
         """The invoice list is unchanged: allocation targets invoices."""
         ids = {
@@ -72,6 +91,16 @@ class TestBejermanCreditSnapshot(BejermanTestMixin, TransactionCase):
         self.assertEqual(self._customer(connector, "123").credit_total, 50.0)
         self.assertEqual(self._customer(connector, "124").credit_total, 0.0)
         self.assertEqual(connector.bejerman_snapshot_debt_count, 4)
+        credits = self.env["collection.connector.bejerman.debt"].search(
+            [
+                ("connector_id", "=", connector.id),
+                ("document_kind", "=", "credit_note"),
+            ]
+        )
+        self.assertEqual(
+            [(c.external_invoice_id, c.customer_code, c.balance) for c in credits],
+            [("NC|00004|A|00000009", "123", -50.0)],
+        )
 
     def test_customer_total_is_net_of_open_credit_notes(self):
         """1000 invoice and a 300 credit note: the customer owes 700."""
@@ -90,6 +119,11 @@ class TestBejermanCreditSnapshot(BejermanTestMixin, TransactionCase):
             debt = connector._bejerman_get_customer_debt("E", _ACME)
         self.assertEqual(debt["credit_total"], 300.0)
         self.assertEqual([row["balance"] for row in debt["invoices"]], [1000.0])
+        # The debt list shows both rows: its balance total nets to 700.
+        listed = self.env["collection.connector.bejerman.debt"].search(
+            [("connector_id", "=", connector.id)]
+        )
+        self.assertEqual(sum(listed.mapped("balance")), 700.0)
         summary = connector._format_customer_debt(debt)["summary"]
         self.assertEqual(summary["gross_total"], 1000.0)
         self.assertEqual(summary["credit_total"], 300.0)
