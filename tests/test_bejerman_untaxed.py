@@ -193,6 +193,9 @@ class TestBejermanUntaxedSnapshot(BejermanTestMixin, TransactionCase):
         self.assertEqual((scenario, view), (_UNTAXED_SCENARIO, _UNTAXED_VIEW))
         self.assertEqual(json.loads(filters), _date_filter("15/02/2025", "15/02/2026"))
         debts = self._debts(connector)
+        # Credit notes are listed whatever the VAT book says.
+        credit = debts.pop("NC|00004|A|00000009")
+        self.assertEqual((credit.document_kind, credit.balance), ("credit_note", -50.0))
         self.assertEqual(set(debts), {"FHK|00004|A|00001234", "PRE|00004||00000077"})
         self.assertEqual(connector.bejerman_snapshot_debt_count, 2)
         partial = debts["FHK|00004|A|00001234"]
@@ -235,7 +238,10 @@ class TestBejermanUntaxedSnapshot(BejermanTestMixin, TransactionCase):
             _call_body(mock_post.call_args_list[3])
         )
         self.assertEqual(json.loads(filters), _date_filter("20/01/2026", "20/01/2027"))
-        self.assertEqual(set(self._debts(connector)), {"FHK|00004|A|00001234"})
+        self.assertEqual(
+            set(self._debts(connector)),
+            {"FHK|00004|A|00001234", "NC|00004|A|00000009"},
+        )
         self.assertIn(
             "1 open quotations were issued before 2026-01-20 and were left out",
             "\n".join(logs.output),
@@ -254,8 +260,11 @@ class TestBejermanUntaxedSnapshot(BejermanTestMixin, TransactionCase):
                 "PRE|00004||00000077",
                 "SID|||00000005",
                 "FHK|00004|A|00001235",
+                "NC|00004|A|00000009",
             },
         )
+        # Credit notes are listed only: they have no commission base.
+        self.assertFalse(debts.pop("NC|00004|A|00000009").amount_untaxed)
         for debt in debts.values():
             self.assertEqual(debt.amount_untaxed, debt.amount)
             self.assertEqual(debt.balance_untaxed, debt.balance)

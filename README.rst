@@ -39,7 +39,9 @@ refresh downloads the customers and the debt view in one session, keeps
 as open debt only vouchers with a positive local-currency balance
 (``CVE_SALDOMONLOC > 0``; reconciled rows are dropped), and stores each
 customer's open credit (the sum of its negative balances: credit notes,
-advances) on the customer row. The sellers are the voucher sellers
+advances) on the customer row. Each of those negative-balance vouchers is
+also stored as a ``credit_note`` row of the debt list, after the sales
+VAT book filter, which only concerns invoices. The sellers are the voucher sellers
 (``CVEVEN_COD`` / ``VEN_DESC``) of every debt view row, open or not,
 taken from that same download. Voucher type ``PRE`` (configurable
 through Bejerman Quotation Kinds, default ``PRE``) is a ``quotation``,

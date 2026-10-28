@@ -184,6 +184,17 @@ def _open_entry(
     if amount is None:
         _count_unparsable(stats)
         return None
+    kind = document_kind(identity[0], quotation_kinds)
+    return _voucher_entry(cell, identity, amount, balance, kind)
+
+
+def _voucher_entry(
+    cell: Any,
+    identity: tuple[str, str, str, str, str],
+    amount: float,
+    balance: float,
+    kind: str,
+) -> dict[str, Any]:
     tipo, punto, letra, numero, customer_code = identity
     human_number = "-".join(part for part in (punto, numero) if part)
     return {
@@ -195,7 +206,7 @@ def _open_entry(
         "due_date": _date(cell("vencimiento")),
         "amount": round(amount, 2),
         "balance": round(balance, 2),
-        "document_kind": document_kind(tipo, quotation_kinds),
+        "document_kind": kind,
     }
 
 
@@ -302,6 +313,44 @@ def map_customer_credits(
         seen.add(external_id)
         totals[code] = totals.get(code, 0.0) - balance
     return {code: round(total, 2) for code, total in totals.items()}
+
+
+def map_open_credits(
+    payload: Any,
+    customer_codes: Iterable[str] | None = None,
+) -> list[dict[str, Any]]:
+    """Open credit notes (balance < 0) as debt-list entries; first id wins.
+
+    Same rows as ``map_customer_credits``, one entry each, with the negative
+    balance Bejerman reports and ``document_kind`` ``credit_note``. They are
+    listed only: the customer's ``credit_total`` is what nets its debt.
+    """
+    allowed = None if customer_codes is None else frozenset(customer_codes)
+    cache: dict[tuple[Any, ...], dict[str, Any]] = {}
+    entries: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for row in as_rows(payload):
+        cell = _row_cells(row, cache)
+        if cell is None:
+            continue
+        balance = _amount(cell("saldo"))
+        if balance is None or balance >= 0:
+            continue
+        identity = _voucher_identity(cell)
+        if identity is None:
+            continue
+        if allowed is not None and identity[4] not in allowed:
+            continue
+        # An unreadable amount still lists the credit its balance counts.
+        amount = _amount(cell("importe"))
+        entry = _voucher_entry(
+            cell, identity, balance if amount is None else amount, balance, "credit_note"
+        )
+        if entry["external_invoice_id"] in seen:
+            continue
+        seen.add(entry["external_invoice_id"])
+        entries.append(entry)
+    return entries
 
 
 def _untaxed_voucher_key(cell: Any) -> tuple[str, str] | None:
