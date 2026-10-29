@@ -237,19 +237,33 @@ class CollectionConnector(models.Model):
 
         Used only when ``bejerman_debt_filter_field`` is set, i.e. the ERP view can
         filter server side. Runs on a sudo record: credentials stay admin-only.
+        As in the snapshot, only the documents whose voucher seller is this
+        seller count, and a customer without one reads as unknown.
         """
         self.ensure_one()
         self._bejerman_require_debt_query()
         field = self.bejerman_debt_filter_field
+        seller_code = base_mapping.trim_code(external_seller_id)
+        empty = {"customer": None, "invoices": []}
 
         def _get_debt(client):
-            row = base_mapping.find_customer_row(
-                client.tablas.get_customers(),
-                external_seller_id,
-                customer_identification,
+            matches = base_mapping.find_customer_rows(
+                client.tablas.get_customers(), customer_identification
             )
-            if row is None:
-                return {"customer": None, "invoices": []}
+            if len(matches) > 1:
+                # Ambiguous over the whole master (shared CUITs, code tails):
+                # keep the customers the seller was listed, from the snapshot.
+                listed = set(
+                    self._bejerman_seller_customers(seller_code).mapped("customer_code")
+                )
+                matches = [
+                    row
+                    for row in matches
+                    if base_mapping.customer_from_row(row)["customer_code"] in listed
+                ]
+            if len(matches) != 1:
+                return empty
+            row = matches[0]
             customer = base_mapping.customer_from_row(row)
             rows = client.queries.get_json_query_view(
                 self.bejerman_debt_scenario.strip(),
@@ -259,18 +273,29 @@ class CollectionConnector(models.Model):
             today = self._bejerman_today()
             code = customer["customer_code"]
             stats = {}
-            entries = mapping.map_open_debt(
-                rows,
-                self._bejerman_quotation_kinds(),
-                customer_code=code,
-                stats=stats,
-            )
+            entries = [
+                entry
+                for entry in mapping.map_open_debt(
+                    rows,
+                    self._bejerman_quotation_kinds(),
+                    customer_code=code,
+                    stats=stats,
+                )
+                if entry["seller_code"] == seller_code
+            ]
             self._bejerman_log_skipped_rows(stats)
-            credits = mapping.map_customer_credits(rows, customer_code=code)
+            credit_notes = [
+                note
+                for note in mapping.map_open_credits(rows, customer_codes={code})
+                if note["seller_code"] == seller_code
+            ]
+            if not entries and not credit_notes:
+                return empty
             return {
                 "customer": customer,
                 "invoices": [mapping.entry_to_invoice(e, today) for e in entries],
-                "credit_total": credits.get(code, 0.0),
+                # Open credit as a positive amount (decision D4), this seller's.
+                "credit_total": round(-sum(n["balance"] for n in credit_notes), 2),
                 # Read live: the figures are as of now.
                 "as_of": fields.Datetime.to_string(fields.Datetime.now()),
             }

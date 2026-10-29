@@ -15,11 +15,11 @@ the debt view in one session, keeps as open debt only vouchers with a positive
 local-currency balance (`CVE_SALDOMONLOC > 0`; reconciled rows are dropped), and stores
 each customer's open credit (the sum of its negative balances: credit notes, advances)
 on the customer row. Each of those negative-balance vouchers is also stored as a
-`credit_note` row of the debt list, after the sales VAT book filter, which only
-concerns invoices. The sellers are the voucher sellers (`CVEVEN_COD` / `VEN_DESC`) of
-every debt view row, open or not, taken from that same download. Voucher type `PRE`
-(configurable through Bejerman Quotation Kinds, default `PRE`) is a `quotation`, every
-other type an `invoice`; the external id is the stable `type|point|letter|number` key.
+`credit_note` row of the debt list, after the sales VAT book filter, which only concerns
+invoices. The sellers are the voucher sellers (`CVEVEN_COD` / `VEN_DESC`) of every debt
+view row, open or not, taken from that same download. Voucher type `PRE` (configurable
+through Bejerman Quotation Kinds, default `PRE`) is a `quotation`, every other type an
+`invoice`; the external id is the stable `type|point|letter|number` key.
 
 Untaxed amount (seller commission base): when **Untaxed Scenario** and **Untaxed View**
 are set (a sales VAT book query view, e.g. `Libro IVA Ventas/IA CRIS`; managers can edit
@@ -43,4 +43,6 @@ with its total. A failed read of the view fails the refresh like the debt view.
 Live debt: optionally, set Bejerman Debt Filter Field (for example `CVE_CODCLI`) once
 the ERP exposes a filterable child view: debt is then read live per customer instead of
 from the snapshot, with no untaxed amount (commission on the total), and sheets marked
-**Entered in the ERP** are no longer subtracted.
+**Entered in the ERP** are no longer subtracted. It keeps the snapshot's seller scope:
+only the documents whose voucher seller (`CVEVEN_COD`) is the asking seller count, and a
+customer without one reads as unknown.
