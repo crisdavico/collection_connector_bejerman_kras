@@ -98,7 +98,7 @@ class TestBejermanSnapshot(BejermanTestMixin, TransactionCase):
         invoice = debts.filtered(lambda r: r.external_invoice_id.endswith("1234"))
         self.assertEqual(invoice.number, "FHK A 00004-00001234")
         self.assertEqual(invoice.customer_code, "123")
-        self.assertEqual(invoice.seller_code, "DN")
+        self.assertEqual(invoice.seller_code, "E")
         self.assertEqual(invoice.issue_date, date(2026, 1, 1))
         self.assertEqual(invoice.due_date, date(2026, 3, 1))
         self.assertEqual(invoice.amount, 1000.0)
@@ -120,8 +120,8 @@ class TestBejermanSnapshot(BejermanTestMixin, TransactionCase):
         self.assertEqual(connector.bejerman_snapshot_customer_count, 2)
 
         sellers = self._sellers(connector)
-        self.assertEqual(sellers.mapped("seller_code"), ["DN"])
-        self.assertEqual(sellers.name, "SYNTHETIC SELLER")
+        self.assertEqual(sellers.mapped("seller_code"), ["DN", "E"])
+        self.assertEqual(set(sellers.mapped("name")), {"SYNTHETIC SELLER"})
         self.assertEqual(sellers.company_id, connector.company_id)
 
     def test_refresh_stores_sellers_of_every_debt_row_in_the_same_download(self):
@@ -143,7 +143,7 @@ class TestBejermanSnapshot(BejermanTestMixin, TransactionCase):
         actions = [_call_soap_action(call) for call in mock_post.call_args_list]
         self.assertEqual(len(actions), 4)
         sellers = self._sellers(connector)
-        self.assertEqual(sellers.mapped("seller_code"), ["DN", "SA1"])
+        self.assertEqual(sellers.mapped("seller_code"), ["DN", "E", "SA1"])
         self.assertEqual(
             sellers.filtered(lambda r: r.seller_code == "SA1").name, "SANCHEZ ANA"
         )
@@ -165,9 +165,11 @@ class TestBejermanSnapshot(BejermanTestMixin, TransactionCase):
         )
         pack = {"clientes": _CLIENTES, "debts": [*_DEBT_ROWS, other]}
         self._refresh(connector, payloads_by_url={"*": pack})
-        self.assertEqual(self._sellers(connector).mapped("seller_code"), ["DN", "QQ"])
+        self.assertEqual(
+            self._sellers(connector).mapped("seller_code"), ["DN", "E", "QQ"]
+        )
         self._refresh(connector)
-        self.assertEqual(self._sellers(connector).mapped("seller_code"), ["DN"])
+        self.assertEqual(self._sellers(connector).mapped("seller_code"), ["DN", "E"])
 
     def test_second_refresh_replaces_previous_rows(self):
         """A refresh drops reconciled rows and keeps only the new snapshot."""
@@ -702,13 +704,13 @@ class TestBejermanSnapshotReads(BejermanTestMixin, TransactionCase):
                 self.connector._bejerman_get_customer_debt("E", ident), empty
             )
 
-    def test_customer_without_open_debt_has_empty_invoices(self):
-        """A known customer with no open rows keeps the customer and no invoices."""
+    def test_customer_without_open_debt_is_hidden(self):
+        """A known customer with no open rows has no document of E: unknown."""
         pack = {"clientes": _CLIENTES, "debts": []}
         self._refresh(self.connector, payloads_by_url={"*": pack})
         debt = self.connector._bejerman_get_customer_debt("E", "20123456789")
-        self.assertEqual(debt["customer"]["id"], "123")
-        self.assertEqual(debt["invoices"], [])
+        self.assertEqual(debt, {"customer": None, "invoices": []})
+        self.assertEqual(self.connector._bejerman_list_customers("E"), [])
 
     def test_no_snapshot_fails_closed_without_download(self):
         """Before the first refresh both reads raise the generic error, no POST."""

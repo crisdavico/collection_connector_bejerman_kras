@@ -6,6 +6,7 @@ from . import test_bejerman_commission
 from . import test_bejerman_connector
 from . import test_bejerman_credit_notes
 from . import test_bejerman_debt_mapping
+from . import test_bejerman_debt_seller_scope
 from . import test_bejerman_enable_seller
 from . import test_bejerman_erp_entry
 from . import test_bejerman_kras_profile

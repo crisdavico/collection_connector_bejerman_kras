@@ -32,8 +32,8 @@ class TestBejermanEnableSeller(BejermanTestMixin, TransactionCase):
         self.company.collection_connector_id = self.connector
         pack = {
             "clientes": _CLIENTES,
+            # First, so seller E takes this row's name.
             "debts": [
-                *_DEBT_ROWS,
                 _debt_row(
                     "FHK",
                     "00004",
@@ -45,6 +45,7 @@ class TestBejermanEnableSeller(BejermanTestMixin, TransactionCase):
                     vendedor="000E",
                     vendedor_nombre="ANA PEREZ",
                 ),
+                *_DEBT_ROWS,
             ],
         }
         with _patch_httpx(payloads_by_url={"*": pack}) as self.refresh_post:

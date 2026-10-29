@@ -74,7 +74,7 @@ def _debt_row(
     saldo,
     imp=None,
     femision="2026-01-01T00:00:00.000Z",
-    vendedor="DN",
+    vendedor="E",
     prefix=_DEBT_PREFIX,
     vendedor_nombre="SYNTHETIC SELLER",
 ):
@@ -125,8 +125,16 @@ _DEBT_ROWS = [
     _debt_row(
         "NC", "00004", "A", "00000009", "000123", "2026-04-01T00:00:00.000Z", -50
     ),
+    # Issued by another seller: E never sees it.
     _debt_row(
-        "FHK", "00004", "A", "00001235", "000124", "2026-05-01T00:00:00.000Z", 999
+        "FHK",
+        "00004",
+        "A",
+        "00001235",
+        "000124",
+        "2026-05-01T00:00:00.000Z",
+        999,
+        vendedor="DN",
     ),
 ]
 _UNTAXED_PREFIX = "STA_LIBROIVAVENTAS_2_001"
@@ -474,6 +482,13 @@ class TestBejermanConnector(BejermanTestMixin, TransactionCase):
                     "commission_percent": 0.0,
                 },
                 {
+                    "id": "E",
+                    "name": "SYNTHETIC SELLER",
+                    "mobile": "",
+                    "active": False,
+                    "commission_percent": 0.0,
+                },
+                {
                     "id": "SA1",
                     "name": "SANCHEZ ANA",
                     "mobile": "",
@@ -621,8 +636,10 @@ class TestBejermanConnector(BejermanTestMixin, TransactionCase):
             "Cliente_Habilitado": True,
             "Cliente_VendedorCodigo": "000E",
         }
+        # Both customers hold a document of E, so both are E's customers.
         debts = [
             _debt_row("FHK", "1", "A", "9", "NS0160", "2026-03-01", 80, vendedor="E"),
+            _debt_row("FHK", "1", "A", "10", "AB0160", "2026-03-01", 5, vendedor="E"),
         ]
         self._refresh(
             connector,
@@ -666,7 +683,7 @@ class TestBejermanConnector(BejermanTestMixin, TransactionCase):
             debt = connector._bejerman_get_customer_debt("E", "20123456789")
         blob = json.dumps({"sellers": sellers, "customers": customers, "debt": debt})
         self.assertNotIn(_QUERY_PREFIX, blob)
-        self.assertEqual(sellers[0]["id"], "DN")
+        self.assertEqual(sellers[0]["id"], "E")
         self.assertEqual(customers[0]["id"], "123")
         self.assertEqual(debt["invoices"][0]["id"], "FHK|00004|A|00000009")
 
@@ -731,7 +748,7 @@ class TestBejermanConnector(BejermanTestMixin, TransactionCase):
         self.assertTrue(posted_after_a)
         self.assertTrue(all(url == _WS_URL for url in posted_after_a))
         self.assertNotIn(_WS_URL_B, posted_after_a)
-        self.assertEqual({row["id"] for row in sellers_a}, {"DN"})
+        self.assertEqual({row["id"] for row in sellers_a}, {"DN", "E"})
         self.assertEqual({row["id"] for row in sellers_b}, {"B1"})
         self.assertIn(_WS_URL_B, posted)
         # Listing is a snapshot read: no further request after the refreshes.
