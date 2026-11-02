@@ -63,10 +63,6 @@ class TestBejermanKrasProfile(BejermanTestMixin, TransactionCase):
             connector._bejerman_get_customer_debt("E", "20123456789")
         self.assertEqual(str(ctx.exception), _NOT_CONFIGURED)
         mock_post.assert_not_called()
-        self.assertEqual(
-            connector._collection_erp_reflected_since(),
-            connector.bejerman_snapshot_started_at,
-        )
 
     def test_kras_connector_reads_both_views_and_stores_untaxed_amounts(self):
         connector = self._make_connector(

@@ -213,14 +213,6 @@ class CollectionConnector(models.Model):
         return payload
 
     @api.private
-    def _collection_erp_reflected_since(self):
-        """The live filter path reads Bejerman at question time: now."""
-        self.ensure_one()
-        if self._bejerman_live_debt():
-            return fields.Datetime.now()
-        return super()._collection_erp_reflected_since()
-
-    @api.private
     def _bejerman_get_customer_debt(self, external_seller_id, customer_identification):
         self.ensure_one()
         if self._bejerman_live_debt():

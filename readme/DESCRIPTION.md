@@ -42,7 +42,6 @@ with its total. A failed read of the view fails the refresh like the debt view.
 
 Live debt: optionally, set Bejerman Debt Filter Field (for example `CVE_CODCLI`) once
 the ERP exposes a filterable child view: debt is then read live per customer instead of
-from the snapshot, with no untaxed amount (commission on the total), and sheets marked
-**Entered in the ERP** are no longer subtracted. It keeps the snapshot's seller scope:
-only the documents whose voucher seller (`CVEVEN_COD`) is the asking seller count, and a
-customer without one reads as unknown.
+from the snapshot, with no untaxed amount (commission on the total). It keeps the
+snapshot's seller scope: only the documents whose voucher seller (`CVEVEN_COD`) is the
+asking seller count, and a customer without one reads as unknown.
