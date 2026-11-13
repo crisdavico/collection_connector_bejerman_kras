@@ -144,6 +144,20 @@ class TestBejermanDebtSellerScope(BejermanTestMixin, TransactionCase):
         summary = connector._format_customer_debt(debt)["summary"]
         self.assertEqual(summary["net_total"], -300.0)
 
+    def test_blank_seller_code_never_matches_customers_without_a_master_seller(self):
+        """A blank seller code lists nobody, even customers whose master has none."""
+        connector = self._make_connector()
+        orphan = dict(
+            _CLIENTES[0],
+            Cliente_Codigo="000126",
+            Cliente_CUIT="30111222339",
+            Cliente_VendedorCodigo="",
+        )
+        pack = {"clientes": [*_CLIENTES, orphan], "debts": []}
+        self._refresh(connector, payloads_by_url={"*": pack})
+        self.assertEqual(self._listed(connector, ""), [])
+        self.assertEqual(self._listed(connector, "  "), [])
+
     def test_live_path_scopes_documents_by_seller_too(self):
         """Read live: the same rule, the master seller sees its customer owing 0."""
         connector = self._make_connector(
