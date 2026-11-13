@@ -240,9 +240,8 @@ class TestBejermanSnapshot(BejermanTestMixin, TransactionCase):
     def test_refresh_refuses_a_blank_debt_view_without_calling_bejerman(self):
         """A blank debt view is a configuration error, not a failed download."""
         connector = self._make_connector(bejerman_debt_view="  ")
-        with _patch_httpx() as mock_post:
-            with self.assertRaises(UserError) as ctx:
-                connector._bejerman_refresh_snapshot()
+        with _patch_httpx() as mock_post, self.assertRaises(UserError) as ctx:
+            connector._bejerman_refresh_snapshot()
         mock_post.assert_not_called()
         self.assertIn("Debt View", str(ctx.exception))
 
@@ -704,13 +703,20 @@ class TestBejermanSnapshotReads(BejermanTestMixin, TransactionCase):
                 self.connector._bejerman_get_customer_debt("E", ident), empty
             )
 
-    def test_customer_without_open_debt_is_hidden(self):
-        """A known customer with no open rows has no document of E: unknown."""
+    def test_customer_without_open_debt_is_its_master_sellers(self):
+        """No open rows: E's master customer is listed owing 0, G's is not E's."""
         pack = {"clientes": _CLIENTES, "debts": []}
         self._refresh(self.connector, payloads_by_url={"*": pack})
-        debt = self.connector._bejerman_get_customer_debt("E", "20123456789")
-        self.assertEqual(debt, {"customer": None, "invoices": []})
-        self.assertEqual(self.connector._bejerman_list_customers("E"), [])
+        with _patch_today(self.connector):
+            debt = self.connector._bejerman_get_customer_debt("E", "20123456789")
+            other = self.connector._bejerman_get_customer_debt("E", "27987654321")
+        self.assertEqual(debt["customer"]["customer_code"], "123")
+        self.assertEqual((debt["invoices"], debt["credit_total"]), ([], 0.0))
+        self.assertEqual(other, {"customer": None, "invoices": []})
+        self.assertEqual(
+            [row["id"] for row in self.connector._bejerman_list_customers("E")],
+            ["123"],
+        )
 
     def test_no_snapshot_fails_closed_without_download(self):
         """Before the first refresh both reads raise the generic error, no POST."""

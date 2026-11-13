@@ -230,7 +230,8 @@ class CollectionConnector(models.Model):
         Used only when ``bejerman_debt_filter_field`` is set, i.e. the ERP view can
         filter server side. Runs on a sudo record: credentials stay admin-only.
         As in the snapshot, only the documents whose voucher seller is this
-        seller count, and a customer without one reads as unknown.
+        seller count. A customer without one reads as unknown unless the
+        customer master assigns it to this seller: then it owes them nothing.
         """
         self.ensure_one()
         self._bejerman_require_debt_query()
@@ -244,7 +245,8 @@ class CollectionConnector(models.Model):
             )
             if len(matches) > 1:
                 # Ambiguous over the whole master (shared CUITs, code tails):
-                # keep the customers the seller was listed, from the snapshot.
+                # keep the seller's customers (documents or master), from the
+                # snapshot.
                 listed = set(
                     self._bejerman_seller_customers(seller_code).mapped("customer_code")
                 )
@@ -281,7 +283,8 @@ class CollectionConnector(models.Model):
                 for note in mapping.map_open_credits(rows, customer_codes={code})
                 if note["seller_code"] == seller_code
             ]
-            if not entries and not credit_notes:
+            own = seller_code and base_mapping.customer_seller_code(row) == seller_code
+            if not entries and not credit_notes and not own:
                 return empty
             return {
                 "customer": customer,
