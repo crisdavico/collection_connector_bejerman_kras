@@ -77,7 +77,9 @@ Live debt: optionally, set Bejerman Debt Filter Field (for example
 then read live per customer instead of from the snapshot, with no
 untaxed amount (commission on the total). It keeps the snapshot's seller
 scope: only the documents whose voucher seller (``CVEVEN_COD``) is the
-asking seller count, and a customer without one reads as unknown.
+asking seller count, and a customer without one reads as unknown
+unless the customer master assigns it to that seller (then it owes them
+nothing).
 
 **Table of contents**
 

@@ -28,10 +28,12 @@ def _credit_note(nro, codcli, saldo, vendedor):
 
 
 class TestBejermanDebtSellerScope(BejermanTestMixin, TransactionCase):
-    """A seller sees the customers and documents whose voucher seller is them.
+    """A seller sees the customers whose open documents or master name them.
 
-    The customer master's seller never decides: only the seller code of each
-    open document (invoice, quotation or credit note) does.
+    Debt is scoped by the voucher seller of each open document (invoice,
+    quotation or credit note) only. A customer the master assigns to the
+    seller is listed even without documents of theirs, with no debt, so the
+    seller can load an advance for it.
     """
 
     def _refresh_debts(self, connector, debts):
@@ -45,8 +47,20 @@ class TestBejermanDebtSellerScope(BejermanTestMixin, TransactionCase):
     def _ids(self, debt):
         return [row["id"] for row in debt["invoices"]]
 
-    def test_document_seller_sees_the_customer_not_the_master_seller(self):
-        """Debt issued by E to G's customer is E's; G's customer master is ignored."""
+    def _listed(self, connector, seller):
+        return [row["id"] for row in connector._bejerman_list_customers(seller)]
+
+    def _assert_no_debt(self, debt, customer_code):
+        """The customer is known, with no document and no credit of the seller."""
+        self.assertEqual(debt["customer"]["customer_code"], customer_code)
+        self.assertEqual(debt["invoices"], [])
+        self.assertEqual(debt["credit_total"], 0.0)
+
+    def test_document_seller_and_master_seller_both_see_the_customer(self):
+        """E invoiced G's customer and is Acme's master seller: E sees both.
+
+        Each seller still reads only the documents they issued.
+        """
         connector = self._make_connector()
         self._refresh_debts(
             connector,
@@ -55,16 +69,13 @@ class TestBejermanDebtSellerScope(BejermanTestMixin, TransactionCase):
                 _invoice("00000002", "000123", 500, "G"),
             ],
         )
-        self.assertEqual(
-            [row["id"] for row in connector._bejerman_list_customers("E")], ["124"]
-        )
-        self.assertEqual(
-            [row["id"] for row in connector._bejerman_list_customers("G")], ["123"]
-        )
+        self.assertEqual(self._listed(connector, "E"), ["123", "124"])
+        self.assertEqual(self._listed(connector, "G"), ["123", "124"])
         self.assertEqual(
             self._ids(self._debt(connector, "E", _OTHER)), ["FHK|00004|A|00000001"]
         )
-        self.assertEqual(self._debt(connector, "E", _ACME), _EMPTY)
+        self._assert_no_debt(self._debt(connector, "E", _ACME), "123")
+        self._assert_no_debt(self._debt(connector, "G", _OTHER), "124")
         self.assertEqual(
             self._ids(self._debt(connector, "G", _ACME)), ["FHK|00004|A|00000002"]
         )
@@ -93,8 +104,12 @@ class TestBejermanDebtSellerScope(BejermanTestMixin, TransactionCase):
             (1000.0, 100.0, 900.0),
         )
 
-    def test_customer_without_the_sellers_open_documents_is_hidden(self):
-        """No open document carries E: E's own master customer is not shown."""
+    def test_master_customer_without_open_documents_is_shown_with_no_debt(self):
+        """No open document carries E: E's master customer is listed, owing 0.
+
+        That is the customer a seller loads an advance for. The inactive
+        master customer stays hidden.
+        """
         connector = self._make_connector()
         self._refresh_debts(
             connector,
@@ -103,23 +118,48 @@ class TestBejermanDebtSellerScope(BejermanTestMixin, TransactionCase):
                 _invoice("00000002", "000124", 300, "G"),
             ],
         )
-        self.assertEqual(connector._bejerman_list_customers("E"), [])
-        self.assertEqual(self._debt(connector, "E", _ACME), _EMPTY)
+        self.assertEqual(self._listed(connector, "E"), ["123"])
+        self.assertEqual(self._listed(connector, "000E"), ["123"])
+        debt = self._debt(connector, "E", _ACME)
+        self._assert_no_debt(debt, "123")
+        summary = connector._format_customer_debt(debt)["summary"]
+        self.assertEqual((summary["gross_total"], summary["net_total"]), (0.0, 0.0))
+
+    def test_customer_of_neither_documents_nor_master_is_hidden(self):
+        """DN issued nothing open and is no customer's master seller: unknown."""
+        connector = self._make_connector()
+        self._refresh_debts(connector, [_invoice("00000001", "000123", 300, "G")])
+        self.assertEqual(self._listed(connector, "DN"), [])
+        self.assertEqual(self._debt(connector, "DN", _ACME), _EMPTY)
+        self.assertEqual(self._debt(connector, "DN", _OTHER), _EMPTY)
 
     def test_customer_with_only_the_sellers_credit_note_is_shown(self):
         """A credit note is an open document: its seller sees the balance in favour."""
         connector = self._make_connector()
         self._refresh_debts(connector, [_credit_note("00000001", "000124", -300, "E")])
-        self.assertEqual(
-            [row["id"] for row in connector._bejerman_list_customers("E")], ["124"]
-        )
+        # 123 is listed too: the customer master assigns it to E.
+        self.assertEqual(self._listed(connector, "E"), ["123", "124"])
         debt = self._debt(connector, "E", _OTHER)
         self.assertEqual(debt["invoices"], [])
         summary = connector._format_customer_debt(debt)["summary"]
         self.assertEqual(summary["net_total"], -300.0)
 
+    def test_blank_seller_code_never_matches_customers_without_a_master_seller(self):
+        """A blank seller code lists nobody, even customers whose master has none."""
+        connector = self._make_connector()
+        orphan = dict(
+            _CLIENTES[0],
+            Cliente_Codigo="000126",
+            Cliente_CUIT="30111222339",
+            Cliente_VendedorCodigo="",
+        )
+        pack = {"clientes": [*_CLIENTES, orphan], "debts": []}
+        self._refresh(connector, payloads_by_url={"*": pack})
+        self.assertEqual(self._listed(connector, ""), [])
+        self.assertEqual(self._listed(connector, "  "), [])
+
     def test_live_path_scopes_documents_by_seller_too(self):
-        """Read live: the same rule, whatever the customer master says."""
+        """Read live: the same rule, the master seller sees its customer owing 0."""
         connector = self._make_connector(
             name="Live", bejerman_debt_filter_field="CVE_CODCLI"
         )
@@ -136,13 +176,31 @@ class TestBejermanDebtSellerScope(BejermanTestMixin, TransactionCase):
         with _patch_httpx(payloads_by_url={"*": pack}), _patch_today(connector):
             mine = connector._bejerman_get_customer_debt("E", _OTHER)
             master_only = connector._bejerman_get_customer_debt("E", _ACME)
+            nobody = connector._bejerman_get_customer_debt("DN", _ACME)
         self.assertEqual(mine["customer"]["customer_code"], "124")
         self.assertEqual(self._ids(mine), ["FHK|00004|A|00000001"])
         self.assertEqual(mine["credit_total"], 20.0)
-        self.assertEqual(master_only, _EMPTY)
+        self._assert_no_debt(master_only, "123")
+        self.assertEqual(nobody, _EMPTY)
 
-    def test_live_path_resolves_a_shared_number_among_the_sellers_customers(self):
-        """Two masters' customers share ``0160``: E's documents pick E's one."""
+    def test_live_path_master_customer_without_any_open_document(self):
+        """Read live: a customer with no open row at all is its master's, owing 0."""
+        connector = self._make_connector(
+            name="Live", bejerman_debt_filter_field="CVE_CODCLI"
+        )
+        pack = {"clientes": _CLIENTES, "debts": []}
+        with _patch_httpx(payloads_by_url={"*": pack}), _patch_today(connector):
+            master = connector._bejerman_get_customer_debt("E", _ACME)
+            other = connector._bejerman_get_customer_debt("G", _ACME)
+        self._assert_no_debt(master, "123")
+        self.assertEqual(other, _EMPTY)
+
+    def test_shared_number_among_the_sellers_customers_is_ambiguous(self):
+        """Two customers share ``0160``, one by E's documents, one by E's master.
+
+        Both are E's, so ``0160`` reads as unknown, live and from the snapshot,
+        and E names the customer by its full code. Never a guess.
+        """
         connector = self._make_connector(
             name="Live", bejerman_debt_filter_field="CVE_CODCLI"
         )
@@ -168,12 +226,28 @@ class TestBejermanDebtSellerScope(BejermanTestMixin, TransactionCase):
             ],
         }
         self._refresh(connector, payloads_by_url={"*": pack})
+        self.assertEqual(self._listed(connector, "E"), ["AB0160", "NS0160"])
         with _patch_httpx(payloads_by_url={"*": pack}), _patch_today(connector):
-            mine = connector._bejerman_get_customer_debt("E", "0160")
-            theirs = connector._bejerman_get_customer_debt("G", "0160")
-            nobody = connector._bejerman_get_customer_debt("DN", "0160")
-        self.assertEqual(mine["customer"]["customer_code"], "NS0160")
-        self.assertEqual(self._ids(mine), ["FHK|00004|A|00000001"])
-        self.assertEqual(theirs["customer"]["customer_code"], "AB0160")
-        self.assertEqual(self._ids(theirs), ["FHK|00004|A|00000002"])
-        self.assertEqual(nobody, _EMPTY)
+            live = {}
+            for seller, query in (
+                ("E", "0160"),
+                ("E", "NS0160"),
+                ("E", "AB0160"),
+                ("G", "AB0160"),
+                ("DN", "0160"),
+            ):
+                live[f"{seller}:{query}"] = connector._bejerman_get_customer_debt(
+                    seller, query
+                )
+        snapshot = self._make_connector(name="Snapshot")
+        self._refresh(snapshot, payloads_by_url={"*": pack})
+        self.assertEqual(live["E:0160"], _EMPTY)
+        self.assertEqual(self._debt(snapshot, "E", "0160"), _EMPTY)
+        self.assertEqual(
+            self._debt(snapshot, "E", "NS0160")["customer"]["customer_code"], "NS0160"
+        )
+        self.assertEqual(live["E:NS0160"]["customer"]["customer_code"], "NS0160")
+        self.assertEqual(self._ids(live["E:NS0160"]), ["FHK|00004|A|00000001"])
+        self._assert_no_debt(live["E:AB0160"], "AB0160")
+        self.assertEqual(self._ids(live["G:AB0160"]), ["FHK|00004|A|00000002"])
+        self.assertEqual(live["DN:0160"], _EMPTY)
